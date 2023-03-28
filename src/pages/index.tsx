@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { SignInButton, SignOutButton, useUser } from "@clerk/nextjs";
 import { type NextPage } from "next";
+import { toast } from "react-hot-toast";
 import Head from "next/head";
 import Image from "next/image";
 import dayjs from "dayjs";
@@ -26,6 +27,14 @@ const CreatePostWizard = () => {
       setInput("");
       void ctx.posts.getAll.invalidate();
     },
+    onError: (e) => {
+      const errorMessage = e.data?.zodError?.fieldErrors?.content;
+      if (errorMessage?.[0]) {
+        toast.error(errorMessage[0]);
+      } else {
+        toast.error("Failed to post! Please try again later!");
+      }
+    },
   });
 
   if (!user) return null;
@@ -45,8 +54,22 @@ const CreatePostWizard = () => {
         disabled={isPosting}
         value={input}
         onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && input !== "") {
+            mutate({ content: input });
+          }
+        }}
       />
-      <button onClick={() => mutate({ content: input })}>Post</button>
+      {input !== "" && !isPosting && (
+        <button onClick={() => mutate({ content: input })} disabled={isPosting}>
+          Post
+        </button>
+      )}
+      {isPosting && (
+        <div className="flex flex-col justify-center">
+          <LoadingSpinner />
+        </div>
+      )}
     </div>
   );
 };
@@ -81,7 +104,6 @@ const PostView = (props: PostWithUser) => {
 
 const Feed = () => {
   const { data, isLoading: postsLoading } = api.posts.getAll.useQuery();
-
   if (postsLoading) {
     return (
       <div className="mt-14 flex items-center justify-center">
