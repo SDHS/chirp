@@ -1,112 +1,51 @@
-// 1:18:38
-import { useState } from "react";
-import { SignInButton, SignOutButton, useUser } from "@clerk/nextjs";
-import { type NextPage } from "next";
-import { toast } from "react-hot-toast";
+import type { GetStaticProps, NextPage } from "next";
 import Head from "next/head";
-import Image from "next/image";
 
+import StandardLayout from "~/components/StandardLayout";
 import PostView from "~/components/PostView";
-import LoadingPageSpinner from "~/components/LoadingPageSpinner";
-import LoadingSpinner from "~/components/LoadingSpinner";
+
+import generateSSGHelper from "~/server/helpers/ssgHelper";
 
 import { api } from "~/utils/api";
-import type { RouterOutputs } from "~/utils/api";
 
-const CreatePostWizard = () => {
-  const { user } = useUser();
-
-  const [input, setInput] = useState("");
-
-  const ctx = api.useContext();
-
-  const { mutate, isLoading: isPosting } = api.posts.create.useMutation({
-    onSuccess: () => {
-      setInput("");
-      void ctx.posts.getAll.invalidate();
-    },
-    onError: (e) => {
-      const errorMessage = e.data?.zodError?.fieldErrors?.content;
-      if (errorMessage?.[0]) {
-        toast.error(errorMessage[0]);
-      } else {
-        toast.error("Failed to post! Please try again later!");
-      }
-    },
+const SinglePostPage: NextPage<{ id: string }> = ({ id }) => {
+  const { data } = api.posts.getById.useQuery({
+    id,
   });
 
-  if (!user) return null;
-
-  return (
-    <div className="flex w-full gap-3">
-      <Image
-        src={user.profileImageUrl}
-        alt="Profile image"
-        width={56}
-        height={56}
-        className="rounded-full"
-      />
-      <input
-        placeholder="Type some emojis!"
-        className="grow bg-transparent outline-none"
-        disabled={isPosting}
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && input !== "") {
-            mutate({ content: input });
-          }
-        }}
-      />
-      {input !== "" && !isPosting && (
-        <button onClick={() => mutate({ content: input })} disabled={isPosting}>
-          Post
-        </button>
-      )}
-      {isPosting && (
-        <div className="flex flex-col justify-center">
-          <LoadingSpinner />
-        </div>
-      )}
-    </div>
-  );
-};
-
-const Feed = () => {
-  const { data, isLoading: postsLoading } = api.posts.getAll.useQuery();
-  if (postsLoading) {
-    return <LoadingPageSpinner />;
-  }
-
-  if (!data) return <div>Something went wrong...</div>;
-
-  return (
-    <div className="flex flex-col">
-      {data?.map((fullPost) => (
-        <PostView {...fullPost} key={fullPost.post.id} />
-      ))}
-    </div>
-  );
-};
-
-const SinglePostPage: NextPage = () => {
-  const { isLoaded: userLoaded, isSignedIn } = useUser();
-
-  // start fetching asap
-  api.posts.getAll.useQuery();
-
-  if (!userLoaded) {
-    return <div />;
-  }
+  if (!data) return <div>404</div>;
 
   return (
     <>
       <Head>
-        <title>Post</title>
+        <title>{`${data.post.content} - @${data.author.username}`}</title>
       </Head>
-      <main className="flex h-screen justify-center">Single post page</main>
+      <StandardLayout>
+        <PostView post={data.post} author={data.author} />
+      </StandardLayout>
     </>
   );
+};
+
+export const getStaticProps: GetStaticProps = async (ctx) => {
+  const ssg = generateSSGHelper();
+
+  const id = ctx.params?.id;
+
+  if (typeof id !== "string") throw new Error("no id");
+
+  await ssg.posts.getById.prefetch({ id });
+
+  return {
+    props: {
+      trpcState: ssg.dehydrate(),
+      id,
+    },
+  };
+};
+
+export const getStaticPaths = () => {
+  return { paths: [], fallback: "blocking" };
 };
 
 export default SinglePostPage;

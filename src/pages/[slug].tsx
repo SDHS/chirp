@@ -1,15 +1,11 @@
-// 2:10:14
 import type { GetStaticProps, NextPage } from "next";
 import Image from "next/image";
 import Head from "next/head";
-import superjson from "superjson";
-import { createProxySSGHelpers } from "@trpc/react-query/ssg";
 
 import StandardLayout from "~/components/StandardLayout";
 import LoadingPageSpinner from "~/components/LoadingPageSpinner";
 
-import { prisma } from "~/server/db";
-import { appRouter } from "~/server/api/root";
+import generateSSGHelper from "~/server/helpers/ssgHelper";
 
 import { api } from "~/utils/api";
 import PostView from "~/components/PostView";
@@ -38,8 +34,6 @@ const ProfilePage: NextPage<{ username: string }> = ({ username }) => {
   const { data } = api.profile.getUserByUsername.useQuery({
     username,
   });
-
-  console.log("data", data);
 
   if (!data) return <div>404</div>;
 
@@ -70,14 +64,7 @@ const ProfilePage: NextPage<{ username: string }> = ({ username }) => {
 };
 
 export const getStaticProps: GetStaticProps = async (ctx) => {
-  const ssg = createProxySSGHelpers({
-    router: appRouter,
-    ctx: {
-      prisma,
-      currentUserId: null,
-    },
-    transformer: superjson,
-  });
+  const ssg = generateSSGHelper();
 
   const slug = ctx.params?.slug;
 
