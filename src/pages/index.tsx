@@ -1,9 +1,8 @@
 // 1:18:38
 import { useState } from "react";
-import { SignInButton, SignOutButton, useUser } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import { type NextPage } from "next";
 import { toast } from "react-hot-toast";
-import Head from "next/head";
 import Image from "next/image";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
