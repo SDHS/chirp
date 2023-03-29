@@ -3,6 +3,7 @@ import Link from "next/link";
 import { toast } from "react-hot-toast";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import { useUser } from "@clerk/nextjs";
 
 import LoadingSpinner from "./LoadingSpinner";
 
@@ -15,6 +16,7 @@ type PostWithUser = RouterOutputs["posts"]["getAll"][number];
 
 const PostView = (props: PostWithUser) => {
   const { post, author } = props;
+  const { user } = useUser();
   const ctx = api.useContext();
 
   const { mutate, isLoading: isDeleting } = api.posts.deleteById.useMutation({
@@ -56,16 +58,20 @@ const PostView = (props: PostWithUser) => {
           {isDeleting ? (
             <LoadingSpinner />
           ) : (
-            <div
-              className="text-3xl text-red-300"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                mutate({ authorId: author.id, postId: post.id });
-              }}
-            >
-              &#215;
-            </div>
+            <>
+              {user?.id === author.id && (
+                <div
+                  className="text-3xl text-red-300"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    mutate({ authorId: author.id, postId: post.id });
+                  }}
+                >
+                  &#215;
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
