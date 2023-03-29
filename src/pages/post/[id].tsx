@@ -5,15 +5,13 @@ import { type NextPage } from "next";
 import { toast } from "react-hot-toast";
 import Head from "next/head";
 import Image from "next/image";
-import dayjs from "dayjs";
-import relativeTime from "dayjs/plugin/relativeTime";
 
+import PostView from "~/components/PostView";
+import LoadingPageSpinner from "~/components/LoadingPageSpinner";
 import LoadingSpinner from "~/components/LoadingSpinner";
 
 import { api } from "~/utils/api";
 import type { RouterOutputs } from "~/utils/api";
-
-dayjs.extend(relativeTime);
 
 const CreatePostWizard = () => {
   const { user } = useUser();
@@ -74,42 +72,10 @@ const CreatePostWizard = () => {
   );
 };
 
-type PostWithUser = RouterOutputs["posts"]["getAll"][number];
-
-const PostView = (props: PostWithUser) => {
-  const { post, author } = props;
-
-  return (
-    <div key={post.id} className="flex gap-3 border-b border-slate-400 p-4">
-      <Image
-        src={author.profilePicture}
-        alt={`@${author.username}'s profile picture`}
-        width={56}
-        height={56}
-        className="rounded-full"
-      />
-      <div className="flex flex-col">
-        <div className="flex text-slate-300">
-          <span className="font-bold">{`@${author.username}`}</span>
-          <span className="whitespace-pre-wrap"> • </span>
-          <span className="self-center text-xs font-thin">{`${dayjs(
-            post.createdAt
-          ).fromNow()}`}</span>
-        </div>
-        <span className="text-2xl">{post.content}</span>
-      </div>
-    </div>
-  );
-};
-
 const Feed = () => {
   const { data, isLoading: postsLoading } = api.posts.getAll.useQuery();
   if (postsLoading) {
-    return (
-      <div className="mt-14 flex items-center justify-center">
-        <LoadingSpinner size={60} />
-      </div>
-    );
+    return <LoadingPageSpinner />;
   }
 
   if (!data) return <div>Something went wrong...</div>;

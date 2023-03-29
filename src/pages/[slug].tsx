@@ -6,11 +6,33 @@ import superjson from "superjson";
 import { createProxySSGHelpers } from "@trpc/react-query/ssg";
 
 import StandardLayout from "~/components/StandardLayout";
+import LoadingPageSpinner from "~/components/LoadingPageSpinner";
 
 import { prisma } from "~/server/db";
 import { appRouter } from "~/server/api/root";
 
 import { api } from "~/utils/api";
+import PostView from "~/components/PostView";
+
+const ProfileFeed = ({ userId }: { userId: string }) => {
+  const { data, isLoading } = api.posts.getPostsByUserId.useQuery({ userId });
+
+  if (isLoading) {
+    return <LoadingPageSpinner />;
+  }
+
+  if (!data || data.length === 0) {
+    return <div>User has not posted</div>;
+  }
+
+  return (
+    <div className="flex flex-col">
+      {data.map(({ post, author }) => (
+        <PostView key={post.id} post={post} author={author} />
+      ))}
+    </div>
+  );
+};
 
 const ProfilePage: NextPage<{ username: string }> = ({ username }) => {
   const { data } = api.profile.getUserByUsername.useQuery({
@@ -41,6 +63,7 @@ const ProfilePage: NextPage<{ username: string }> = ({ username }) => {
           data.username ?? ""
         }`}</div>
         <div className="w-full border-b border-slate-400" />
+        <ProfileFeed userId={data.id} />
       </StandardLayout>
     </>
   );
