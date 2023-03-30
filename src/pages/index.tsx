@@ -1,7 +1,7 @@
 // 1:18:38
-import { useState } from "react";
+import React, { useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { type NextPage } from "next";
+import type { NextPage } from "next";
 import { toast } from "react-hot-toast";
 import Image from "next/image";
 import dayjs from "dayjs";
@@ -74,8 +74,26 @@ const CreatePostWizard = () => {
   );
 };
 
+const ITEMS_PER_PAGE = 5;
+
 const Feed = () => {
-  const { data, isLoading: postsLoading } = api.posts.getAll.useQuery();
+  const {
+    data,
+    isLoading: postsLoading,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = api.posts.getAll.useInfiniteQuery(
+    {
+      itemsPerPage: ITEMS_PER_PAGE,
+    },
+    {
+      getNextPageParam: ({ pagination }) =>
+        pagination.hasNextPage ? pagination.currentPage + 1 : undefined,
+      initialCursor: 1,
+    }
+  );
+
   if (postsLoading) {
     return (
       <div className="mt-14 flex items-center justify-center">
@@ -87,19 +105,33 @@ const Feed = () => {
   if (!data) return <div>Something went wrong...</div>;
 
   return (
-    <div className="flex flex-col">
-      {data?.map((fullPost) => (
-        <PostView {...fullPost} key={fullPost.post.id} />
-      ))}
-    </div>
+    <>
+      <div className="flex flex-col">
+        {data.pages.map((page, i) => (
+          <React.Fragment key={i}>
+            {page.posts.map((fullPost) => (
+              <PostView {...fullPost} key={fullPost.post.id} />
+            ))}
+          </React.Fragment>
+        ))}
+      </div>
+      {hasNextPage && (
+        <div className="flex w-full items-center justify-center p-2">
+          <button
+            className="w-full rounded-md bg-slate-600 p-2 md:max-w-xs"
+            onClick={() => void fetchNextPage()}
+            disabled={isFetchingNextPage}
+          >
+            {isFetchingNextPage ? <LoadingSpinner /> : "Load more"}
+          </button>
+        </div>
+      )}
+    </>
   );
 };
 
 const Home: NextPage = () => {
   const { isLoaded: userLoaded, isSignedIn } = useUser();
-
-  // start fetching asap
-  api.posts.getAll.useQuery();
 
   if (!userLoaded) {
     return <div />;

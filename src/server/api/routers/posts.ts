@@ -53,14 +53,32 @@ export const postsRouter = createTRPCRouter({
 
       return (await addUserDataToPosts([post]))[0];
     }),
-  getAll: publicProcedure.query(async ({ ctx }) => {
-    const posts = await ctx.prisma.post.findMany({
-      take: 100,
-      orderBy: [{ createdAt: "desc" }],
-    });
+  getAll: publicProcedure
+    .input(
+      z.object({
+        cursor: z.number(),
+        itemsPerPage: z.number(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { cursor, itemsPerPage } = input;
+      const posts = await ctx.prisma.post.findMany({
+        skip: (cursor - 1) * itemsPerPage,
+        take: itemsPerPage + 1,
+        orderBy: [{ createdAt: "desc" }],
+      });
 
-    return addUserDataToPosts(posts);
-  }),
+      let hasNextPage = false;
+      if (posts.length > itemsPerPage) {
+        hasNextPage = true;
+        posts.pop();
+      }
+
+      return {
+        posts: await addUserDataToPosts(posts),
+        pagination: { currentPage: cursor, hasNextPage },
+      };
+    }),
 
   getPostsByUserId: publicProcedure
     .input(
